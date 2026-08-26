@@ -7,21 +7,8 @@ services:
     working_dir: /workspace
 
     volumes:
-      - resume_workspace:/workspace
-
-    read_only: true
-
-    tmpfs:
-      - /tmp
-
-    cap_drop:
-      - ALL
-
-    security_opt:
-      - no-new-privileges:true
+      - .:/workspace
 
     stdin_open: true
     tty: true
 
-volumes:
-  resume_workspace:
