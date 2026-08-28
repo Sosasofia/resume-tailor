@@ -6,3 +6,14 @@ class JobAnalysis(BaseModel):
     missing_skills: list[str]
     matching_experience: list[str]
     recommendations: list[str]
+
+
+class ResumeChange(BaseModel):
+    section: str
+    original: str
+    suggested: str
+    reason: str
+
+
+class TailoringResult(BaseModel):
+    changes: list[ResumeChange]

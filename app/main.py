@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from app.llm import analyze_job
+from app.llm import analyze_job, tailor_resume
 from app.parser import extract_pdf_text
 
 
 def read_text_file(path: Path) -> str:
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
-    
+
     return path.read_text(encoding="utf-8")
 
 
@@ -15,12 +15,12 @@ def main() -> None:
     resume_path = Path("data/input/data.pdf")
     job_description_path = Path("data/input/job_description.txt")
 
-    resume = extract_pdf_text(resume_path)
+    resume_text = extract_pdf_text(resume_path)
     job_description = read_text_file(job_description_path)
 
     analysis = analyze_job(
-        resume_text=resume,
-        job_description=job_description,
+        resume_text,
+        job_description,
     )
 
     print("=== MATCH SCORE ===")
@@ -41,6 +41,24 @@ def main() -> None:
     print("\n=== RECOMMENDATIONS ===")
     for recommendation in analysis.recommendations:
         print(f"- {recommendation}")
+
+    tailoring = tailor_resume(
+        resume_text,
+        job_description,
+        analysis,
+    )
+
+    print("\n=== PROPOSED RESUME CHANGES ===")
+
+    if not tailoring.changes:
+        print("No changes recommended.")
+        return
+
+    for index, change in enumerate(tailoring.changes, start=1):
+        print(f"\n[{index}] {change.section}")
+        print(f"Original:   {change.original}")
+        print(f"Suggested:  {change.suggested}")
+        print(f"Reason:     {change.reason}")
 
 
 if __name__ == "__main__":
