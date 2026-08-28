@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from analyzer import compare_skills
+from parser import extract_pdf_text
 
 
 def read_text_file(path: Path) -> str:
@@ -8,10 +9,10 @@ def read_text_file(path: Path) -> str:
 
 
 def main() -> None:
-    resume_path = Path("data/input/resume.txt")
+    resume_path = Path("data/input/data.pdf")
     job_description_path = Path("data/input/job_description.txt")
 
-    resume = read_text_file(resume_path)
+    resume = extract_pdf_text(resume_path)
     job_description = read_text_file(job_description_path)
 
     matching_skills, missing_skills = compare_skills(
