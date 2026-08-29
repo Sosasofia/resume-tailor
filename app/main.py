@@ -2,6 +2,7 @@ from pathlib import Path
 
 from app.llm import analyze_job, tailor_resume
 from app.parser import extract_pdf_text
+from app.validator import validate_change
 
 
 def read_text_file(path: Path) -> str:
@@ -48,17 +49,46 @@ def main() -> None:
         analysis,
     )
 
-    print("\n=== PROPOSED RESUME CHANGES ===")
+    validated_changes = [
+        validate_change(change, resume_text)
+        for change in tailoring.changes
+    ]
 
-    if not tailoring.changes:
-        print("No changes recommended.")
-        return
+    print("\n=== APPROVED RESUME CHANGES ===")
 
-    for index, change in enumerate(tailoring.changes, start=1):
-        print(f"\n[{index}] {change.section}")
-        print(f"Original:   {change.original}")
-        print(f"Suggested:  {change.suggested}")
-        print(f"Reason:     {change.reason}")
+    approved_changes = [
+        result for result in validated_changes
+        if result.approved
+    ]
+
+    if not approved_changes:
+        print("No changes passed validation.")
+    else:
+        for index, result in enumerate(approved_changes, start=1):
+            change = result.change
+
+            print(f"\n[{index}] {change.section}")
+            print(f"Original:   {change.original}")
+            print(f"Suggested:  {change.suggested}")
+            print(f"Reason:     {change.reason}")
+
+    print("\n=== REJECTED RESUME CHANGES ===")
+
+    rejected_changes = [
+        result for result in validated_changes
+        if not result.approved
+    ]
+
+    if not rejected_changes:
+        print("No changes were rejected.")
+    else:
+        for index, result in enumerate(rejected_changes, start=1):
+            change = result.change
+
+            print(f"\n[{index}] {change.section}")
+            print(f"Original:   {change.original}")
+            print(f"Suggested:  {change.suggested}")
+            print(f"Reason:     {result.reason}")
 
 
 if __name__ == "__main__":

@@ -17,3 +17,9 @@ class ResumeChange(BaseModel):
 
 class TailoringResult(BaseModel):
     changes: list[ResumeChange]
+
+
+class ValidatedChange(BaseModel):
+    change: ResumeChange
+    approved: bool
+    reason: str
