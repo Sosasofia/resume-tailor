@@ -1,12 +1,5 @@
 from pydantic import BaseModel, Field
 
-class JobAnalysis(BaseModel):
-    match_score: float = Field(ge=0.0, le=1.0)
-    matching_skills: list[str]
-    missing_skills: list[str]
-    matching_experience: list[str]
-    recommendations: list[str]
-
 
 class ResumeChange(BaseModel):
     section: str
@@ -15,11 +8,31 @@ class ResumeChange(BaseModel):
     reason: str
 
 
-class TailoringResult(BaseModel):
-    changes: list[ResumeChange]
-
-
 class ValidatedChange(BaseModel):
     change: ResumeChange
     approved: bool
     reason: str
+
+
+class JobRequirements(BaseModel):
+    required_skills: list[str]
+    preferred_skills: list[str]
+    responsibilities: list[str]
+    keywords: list[str]
+
+
+class ResumeStrategy(BaseModel):
+    priority_skills: list[str]
+    matching_skills: list[str]
+    missing_required_skills: list[str]
+    relevant_experience: list[str]
+    relevant_projects: list[str]
+    keywords_to_use: list[str]
+
+
+class ATSResume(BaseModel):
+    summary: str
+    skills: list[str]
+    experience: list[str]
+    projects: list[str]
+    education: list[str]

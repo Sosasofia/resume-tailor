@@ -1,94 +1,83 @@
 from pathlib import Path
 
-from app.llm import analyze_job, tailor_resume
-from app.parser import extract_pdf_text
-from app.validator import validate_change
-
-
-def read_text_file(path: Path) -> str:
-    if not path.exists():
-        raise FileNotFoundError(f"File not found: {path}")
-
-    return path.read_text(encoding="utf-8")
+from app.document import create_ats_document
+from app.llm import extract_job_requirements, generate_ats_resume
+from app.profile_loader import load_profile
+from app.strategy import build_resume_strategy
 
 
 def main() -> None:
-    resume_path = Path("data/input/data.pdf")
-    job_description_path = Path("data/input/job_description.txt")
+    profile_path = Path("data/profile.json")
+    job_path = Path("data/input/job_description.txt")
+    output_path = Path("output/tailored_resume.pdf")
 
-    resume_text = extract_pdf_text(resume_path)
-    job_description = read_text_file(job_description_path)
+    if not job_path.exists():
+        raise FileNotFoundError(f"Job description not found: {job_path}")
 
-    analysis = analyze_job(
-        resume_text,
-        job_description,
+    profile = load_profile(profile_path)
+    job_description = job_path.read_text(encoding="utf-8")
+
+    requirements = extract_job_requirements(
+        job_description
     )
 
-    print("=== MATCH SCORE ===")
-    print(f"{analysis.match_score:.0%}")
+    strategy = build_resume_strategy(
+        profile,
+        requirements,
+    )
+
+    print("=== JOB REQUIREMENTS ===")
+
+    print("\nRequired skills:")
+    for skill in requirements.required_skills:
+        print(f"- {skill}")
+
+    print("\nPreferred skills:")
+    for skill in requirements.preferred_skills:
+        print(f"- {skill}")
 
     print("\n=== MATCHING SKILLS ===")
-    for skill in analysis.matching_skills:
+    for skill in strategy.matching_skills:
         print(f"- {skill}")
 
-    print("\n=== MISSING SKILLS ===")
-    for skill in analysis.missing_skills:
+    print("\n=== MISSING REQUIRED SKILLS ===")
+    for skill in strategy.missing_required_skills:
         print(f"- {skill}")
 
-    print("\n=== MATCHING EXPERIENCE ===")
-    for experience in analysis.matching_experience:
-        print(f"- {experience}")
-
-    print("\n=== RECOMMENDATIONS ===")
-    for recommendation in analysis.recommendations:
-        print(f"- {recommendation}")
-
-    tailoring = tailor_resume(
-        resume_text,
-        job_description,
-        analysis,
+    ats_resume = generate_ats_resume(
+        profile,
+        requirements,
+        strategy,
     )
 
-    validated_changes = [
-        validate_change(change, resume_text)
-        for change in tailoring.changes
-    ]
+    print("\n=== GENERATED ATS RESUME ===")
 
-    print("\n=== APPROVED RESUME CHANGES ===")
+    print("\nSUMMARY")
+    print(ats_resume.summary)
 
-    approved_changes = [
-        result for result in validated_changes
-        if result.approved
-    ]
+    print("\nSKILLS")
+    for skill in ats_resume.skills:
+        print(f"- {skill}")
 
-    if not approved_changes:
-        print("No changes passed validation.")
-    else:
-        for index, result in enumerate(approved_changes, start=1):
-            change = result.change
+    print("\nEXPERIENCE")
+    for experience in ats_resume.experience:
+        print(f"- {experience}")
 
-            print(f"\n[{index}] {change.section}")
-            print(f"Original:   {change.original}")
-            print(f"Suggested:  {change.suggested}")
-            print(f"Reason:     {change.reason}")
+    print("\nPROJECTS")
+    for project in ats_resume.projects:
+        print(f"- {project}")
 
-    print("\n=== REJECTED RESUME CHANGES ===")
+    print("\nEDUCATION")
+    for education in ats_resume.education:
+        print(f"- {education}")
 
-    rejected_changes = [
-        result for result in validated_changes
-        if not result.approved
-    ]
+    create_ats_document(
+        profile=profile,
+        resume=ats_resume,
+        output_path=output_path,
+    )
 
-    if not rejected_changes:
-        print("No changes were rejected.")
-    else:
-        for index, result in enumerate(rejected_changes, start=1):
-            change = result.change
-
-            print(f"\n[{index}] {change.section}")
-            print(f"Original:   {change.original}")
-            print(f"Suggested:  {change.suggested}")
-            print(f"Reason:     {result.reason}")
+    print(f"\nResume written to: {output_path}")
 
 
 if __name__ == "__main__":
