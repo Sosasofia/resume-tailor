@@ -1,17 +1,4 @@
-from pydantic import BaseModel, Field
-
-
-class ResumeChange(BaseModel):
-    section: str
-    original: str
-    suggested: str
-    reason: str
-
-
-class ValidatedChange(BaseModel):
-    change: ResumeChange
-    approved: bool
-    reason: str
+from pydantic import BaseModel
 
 
 class JobRequirements(BaseModel):

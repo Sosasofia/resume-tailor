@@ -68,13 +68,26 @@ JOB DESCRIPTION:
     return response.output_parsed
 
 
-def extract_resume_profile(resume_text: str) -> ResumeProfile:
+def extract_resume_profile(
+    resume_text: str
+) -> ResumeProfile:
     client = create_client()
-    prompt = f"""
-Extract a complete candidate profile from the following resume.
 
-Use only facts explicitly present in the resume. Do not invent values. Use
-empty strings or empty lists when optional information is absent.
+
+    prompt = f"""
+Extract the candidate's complete resume information into the
+provided schema.
+
+
+IMPORTANT:
+- The resume is the only source of truth.
+- Do not invent anything.
+- Preserve employers, roles, dates, skills, projects,
+  education, certifications, metrics, and achievements.
+- Preserve the meaning of the original text.
+- If information is missing, use an empty value where the schema
+  allows it.
+- Do not infer technologies that are not explicitly supported.
 
 RESUME:
 {resume_text}
@@ -86,7 +99,10 @@ RESUME:
     )
 
     if response.output_parsed is None:
-        raise RuntimeError("The model returned no resume profile.")
+        raise RuntimeError(
+            "The model returned no resume profile."
+        )
+    
     return response.output_parsed
 
 
