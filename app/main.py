@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from app.document import create_ats_document
+from app.job import load_job_description
 from app.llm import extract_job_requirements, generate_ats_resume
 from app.profile_loader import load_profile
 from app.strategy import build_resume_strategy
@@ -15,7 +16,8 @@ def main() -> None:
         raise FileNotFoundError(f"Job description not found: {job_path}")
 
     profile = load_profile(profile_path)
-    job_description = job_path.read_text(encoding="utf-8")
+    job_description = load_job_description(job_path)
+
 
     requirements = extract_job_requirements(
         job_description
@@ -44,11 +46,13 @@ def main() -> None:
     for skill in strategy.missing_required_skills:
         print(f"- {skill}")
 
+
     ats_resume = generate_ats_resume(
         profile,
         requirements,
         strategy,
     )
+
 
     print("\n=== GENERATED ATS RESUME ===")
 

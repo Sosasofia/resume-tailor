@@ -68,6 +68,28 @@ JOB DESCRIPTION:
     return response.output_parsed
 
 
+def extract_resume_profile(resume_text: str) -> ResumeProfile:
+    client = create_client()
+    prompt = f"""
+Extract a complete candidate profile from the following resume.
+
+Use only facts explicitly present in the resume. Do not invent values. Use
+empty strings or empty lists when optional information is absent.
+
+RESUME:
+{resume_text}
+"""
+    response = client.responses.parse(
+        model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+        input=prompt,
+        text_format=ResumeProfile,
+    )
+
+    if response.output_parsed is None:
+        raise RuntimeError("The model returned no resume profile.")
+    return response.output_parsed
+
+
 
 def generate_ats_resume(
     profile: ResumeProfile,
