@@ -21,3 +21,7 @@ class AnalyzeResponse(BaseModel):
 class ExtractResponse(BaseModel):
     document_type: Literal["resume", "job_description"]
     data: JobRequirements | ResumeProfile
+
+
+class TailorResponse(BaseModel):
+    format: Literal["markdown", "pdf"]
