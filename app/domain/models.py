@@ -23,3 +23,14 @@ class ATSResume(BaseModel):
     experience: list[str]
     projects: list[str]
     education: list[str]
+
+
+class FactualityIssue(BaseModel):
+    section: str
+    claim: str
+    reason: str
+
+
+class FactualityResult(BaseModel):
+    approved: bool
+    issues: list[FactualityIssue]

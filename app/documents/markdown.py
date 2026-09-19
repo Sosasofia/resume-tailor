@@ -1,5 +1,5 @@
-from app.models import ATSResume
-from app.profile import ResumeProfile
+from app.domain.models import ATSResume
+from app.domain.profile import ResumeProfile
 
 
 def render_markdown(

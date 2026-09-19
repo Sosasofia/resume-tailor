@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from app.profile import ResumeProfile
+from app.domain.profile import ResumeProfile
 
 
 def load_profile(path: Path) -> ResumeProfile:

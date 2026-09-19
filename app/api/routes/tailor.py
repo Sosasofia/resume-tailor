@@ -3,113 +3,32 @@ from pathlib import Path
 from typing import Literal
 
 
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Response
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Response, BackgroundTasks
+from fastapi.responses import FileResponse
 
 
-from app.api.schemas import AnalyzeRequest, AnalyzeResponse, ExtractResponse, ExtractResponse
-from app.llm import (
-    extract_job_requirements,
-    extract_resume_profile,
-    generate_ats_resume,
+from app.services import (
+    tailoring,
+    extraction
 )
-from app.profile import ResumeProfile
-from app.models import JobRequirements
-from app.markdown import render_markdown
-from app.matcher import match_skills
-from app.parser import extract_pdf_text
-from app.profile_loader import load_profile
-from app.strategy import build_resume_strategy
+from app.api.schemas import TailorValidationErrorResponse
+from app.domain.profile import ResumeProfile
+from app.domain.models import JobRequirements
+from app.services.matching import build_resume_strategy
+from app.documents.markdown import render_markdown
+from app.documents.parser import extract_pdf_text
+from app.documents.pdf import create_pdf
 
 
-router = APIRouter()
-
-
-@router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
-
-
-@router.post("/extract")
-async def extract(
-    document: UploadFile = File(...),
-    document_type: Literal["resume", "job_description"] = Form(...),
-) -> ExtractResponse:
-    content = await document.read()
-
-    if not content:
-        raise HTTPException(
-            status_code=400,
-            detail="The uploaded document is empty.",
-        )
-
-    suffix = Path(document.filename or "").suffix.lower()
-
-    if suffix != ".pdf" and document_type == "resume":
-        raise HTTPException(
-            status_code=400,
-            detail="Resume extraction currently supports PDF files.",
-        )
-
-    if suffix != ".txt" and document_type == "job_description":
-        raise HTTPException(
-            status_code=400,
-            detail="Job description extraction currently supports TXT files.",
-        )
-
-    temp_dir = Path("/tmp/resume-tailor")
-    temp_dir.mkdir(parents=True, exist_ok=True)
-
-    temp_path = temp_dir / (document.filename or "document")
-
-    temp_path.write_bytes(content)
-
-    try:
-        if document_type == "resume":
-            resume_text = extract_pdf_text(temp_path)
-            data = extract_resume_profile(resume_text)
-
-        else:
-            job_description = temp_path.read_text(
-                encoding="utf-8"
-            )
-            data = extract_job_requirements(job_description)
-
-    finally:
-        temp_path.unlink(missing_ok=True)
-
-    return ExtractResponse(
-        document_type=document_type,
-        data=data,
-    ).model_dump()
-
-
-@router.post("/analyze", response_model=AnalyzeResponse)
-def analyze_job(request: AnalyzeRequest) -> AnalyzeResponse:
-    profile = load_profile(
-        Path("data/profile.json")
-    )
-
-    requirements = extract_job_requirements(
-        request.job_description
-    )
-
-    matching_skills, missing_skills = match_skills(
-        profile,
-        requirements,
-    )
-
-    return AnalyzeResponse(
-        required_skills=requirements.required_skills,
-        preferred_skills=requirements.preferred_skills,
-        responsibilities=requirements.responsibilities,
-        keywords=requirements.keywords,
-        matching_skills=sorted(matching_skills),
-        missing_required_skills=sorted(missing_skills),
-    )
+router = APIRouter(
+    prefix="",
+    tags=["tailor"],
+)
 
 
 @router.post("/tailor")
 async def tailor(
+    background_tasks: BackgroundTasks,
     format: Literal["markdown", "pdf"] = Form(...),
 
     resume: UploadFile | None = File(None),
@@ -198,7 +117,7 @@ async def tailor(
         try:
             temp_path.write_bytes(content)
             resume_text = extract_pdf_text(temp_path)
-            profile = extract_resume_profile(resume_text)
+            profile = extraction.extract_resume_profile(resume_text)
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -226,7 +145,7 @@ async def tailor(
                 detail="job_description_text cannot be empty.",
             )
 
-        requirements = extract_job_requirements(
+        requirements = extraction.extract_job_requirements(
             job_description_text
         )
 
@@ -253,7 +172,7 @@ async def tailor(
 
         job_text = content.decode("utf-8")
 
-        requirements = extract_job_requirements(
+        requirements = extraction.extract_job_requirements(
             job_text
         )
 
@@ -268,11 +187,23 @@ async def tailor(
     # ---------------------------------------------------------
     # Generate ATS resume
     # ---------------------------------------------------------
-    ats_resume = generate_ats_resume(
-        profile,
-        requirements,
-        strategy,
-    )
+    try:
+        ats_resume = tailoring.generate_validated_resume(
+            profile,
+            requirements,
+            strategy,
+        )
+    except tailoring.TailoringValidationError as exc:
+        error_response = TailorValidationErrorResponse(
+            stage=exc.stage,
+            errors=exc.errors,
+            issues=exc.issues,
+        )
+
+        raise HTTPException(
+            status_code=422,
+            detail=error_response.model_dump(),
+        ) from exc
 
     # ---------------------------------------------------------
     # Format
@@ -293,7 +224,22 @@ async def tailor(
             },
         )
 
-    raise HTTPException(
-        status_code=501,
-        detail="PDF output is not implemented on this endpoint yet.",
-    )
+    if format == "pdf":
+        output_path = Path("/tmp/tailored_resume.pdf")
+
+        create_pdf(
+            profile,
+            ats_resume,
+            output_path,
+        )
+
+        background_tasks.add_task(
+            output_path.unlink,
+            missing_ok=True,
+        )
+
+        return FileResponse(
+            path=output_path,
+            media_type="application/pdf",
+            filename="tailored_resume.pdf",
+        )

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.profile_loader import load_profile
+from app.services.profile import load_profile
 
 
 def test_profile_can_be_loaded() -> None:

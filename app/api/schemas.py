@@ -1,8 +1,8 @@
+from pydantic import BaseModel
 from typing import Literal
 
-from app.models import JobRequirements
-from app.profile import ResumeProfile
-from pydantic import BaseModel
+from app.domain.models import JobRequirements
+from app.domain.profile import ResumeProfile
 
 
 class AnalyzeRequest(BaseModel):
@@ -25,3 +25,18 @@ class ExtractResponse(BaseModel):
 
 class TailorResponse(BaseModel):
     format: Literal["markdown", "pdf"]
+
+
+class ValidationIssueResponse(BaseModel):
+    section: str
+    claim: str
+    reason: str
+
+
+class TailorValidationErrorResponse(BaseModel):
+    stage: Literal[
+        "deterministic_factuality",
+        "semantic_factuality",
+    ]
+    errors: list[str] = []
+    issues: list[ValidationIssueResponse] = []

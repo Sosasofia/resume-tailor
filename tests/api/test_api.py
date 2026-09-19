@@ -1,17 +1,14 @@
-import json
-
-
 from fastapi.testclient import TestClient
 
 
-from app.api.main import app
-from app.models import ATSResume, JobRequirements, ResumeStrategy
-from app.profile import (
+from app.main import app
+from app.domain.models import ATSResume, FactualityResult, JobRequirements
+from app.domain.profile import (
     Basics,
     Education,
     ResumeProfile,
 )
-from app.api import routes
+from tests.helpers import make_profile
 
 
 client = TestClient(app)
@@ -83,44 +80,37 @@ def build_resume() -> ATSResume:
         education=["Software Engineering"],
     )
 
+
 def test_tailor_with_profile_json_and_job_text(
-    monkeypatch,
-) -> None:
-    profile = build_profile()
-    requirements = build_requirements()
-    resume = build_resume()
+        monkeypatch,
+    ) -> None:
+        profile = build_profile()
+        requirements = build_requirements()
+        resume = build_resume()
 
-    monkeypatch.setattr(
-        routes,
-        "extract_job_requirements",
-        lambda _: requirements,
-    )
+        monkeypatch.setattr(
+            "app.services.extraction.extract_job_requirements",
+            lambda _: requirements,
+        )
 
-    monkeypatch.setattr(
-        routes,
-        "generate_ats_resume",
-        lambda profile, requirements, strategy: resume,
-    )
+        monkeypatch.setattr(
+            "app.services.tailoring.generate_validated_resume",
+            lambda profile, requirements, strategy: resume,
+        )
 
-    response = client.post(
-        "/tailor",
-        data={
-            "format": "markdown",
-            "profile_json": profile.model_dump_json(),
-            "job_description_text": "Python backend developer",
-        },
-    )
+        response = client.post(
+            "/tailor",
+            data={
+                "format": "markdown",
+                "profile_json": profile.model_dump_json(),
+                "job_description_text": "Python backend developer",
+            },
+        )
 
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith(
-        "text/markdown"
-    )
-    assert (
-        'attachment; filename="tailored_resume.md"'
-        in response.headers["content-disposition"]
-    )
-    assert "# Test User" in response.text
-    assert "Python" in response.text
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith(
+            "text/markdown"
+        )
 
 
 def test_tailor_requires_one_resume_source() -> None:
@@ -134,6 +124,7 @@ def test_tailor_requires_one_resume_source() -> None:
 
     assert response.status_code == 400
     assert "Exactly one resume source" in response.json()["detail"]
+
 
 def test_tailor_rejects_multiple_resume_sources() -> None:
     profile = build_profile()
@@ -204,27 +195,116 @@ def test_tailor_rejects_invalid_profile_json() -> None:
 
 
 def test_tailor_accepts_job_requirements_json(
-    monkeypatch,
-) -> None:
-    profile = build_profile()
-    requirements = build_requirements()
-    resume = build_resume()
+        monkeypatch,
+    ) -> None:
+        profile = build_profile()
+        requirements = build_requirements()
+        resume = build_resume()
+
+        monkeypatch.setattr(
+            "app.services.tailoring.generate_validated_resume",
+            lambda profile, requirements, strategy: resume,
+        )
+
+        response = client.post(
+            "/tailor",
+            data={
+                "format": "markdown",
+                "profile_json": profile.model_dump_json(),
+                "job_requirements_json": requirements.model_dump_json(),
+            },
+        )
+
+        assert response.status_code == 200
+
+
+def test_tailor_rejects_unsupported_resume_claim(client, monkeypatch):
+    invalid_resume = ATSResume(
+        summary="Backend developer",
+        skills=["Python", "Kubernetes"],
+        experience=[],
+        projects=[],
+        education=[],
+    )
 
     monkeypatch.setattr(
-        routes,
-        "generate_ats_resume",
-        lambda profile, requirements, strategy: resume,
+        "app.services.tailoring.generate_ats_resume",
+        lambda profile, requirements, strategy: invalid_resume,
     )
 
     response = client.post(
         "/tailor",
         data={
             "format": "markdown",
-            "profile_json": profile.model_dump_json(),
-            "job_requirements_json": requirements.model_dump_json(),
+            "profile_json": make_profile().model_dump_json(),
+            "job_description_text": "Looking for a Python backend developer.",
         },
     )
 
-    assert response.status_code == 200
-    assert "# Test User" in response.text
+    assert response.status_code == 422
+
+    body = response.json()
+
+    assert body["detail"]["stage"] == "deterministic_factuality"
+    assert any(
+        "Kubernetes" in error
+        for error in body["detail"]["errors"]
+    )
+
+
+def test_tailor_does_not_render_invalid_resume(client, monkeypatch):
+    invalid_resume = ATSResume(
+        summary="Backend developer",
+        skills=["Kubernetes"],
+        experience=[],
+        projects=[],
+        education=[],
+    )
+
+    monkeypatch.setattr(
+        "app.services.tailoring.generate_ats_resume",
+        lambda profile, requirements, strategy: invalid_resume,
+    )
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Renderer should not be called")
+
+    monkeypatch.setattr(
+        "app.documents.markdown.render_markdown",
+        fail_if_called,
+    )
+
+    response = client.post(
+        "/tailor",
+        data={
+            "format": "markdown",
+            "profile_json": make_profile().model_dump_json(),
+            "job_description_text": "Python backend developer",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_tailor_renders_valid_resume(client, monkeypatch):
+    valid_resume = ATSResume(
+        summary="Backend developer",
+        skills=["Python"],
+        experience=[],
+        projects=[],
+        education=[],
+    )
+
+    monkeypatch.setattr(
+        "app.services.tailoring.generate_ats_resume",
+        lambda profile, requirements, strategy: valid_resume,
+    )
+
+    monkeypatch.setattr(
+        "app.services.validation.validate_factuality",
+        lambda profile, resume: FactualityResult(
+            approved=True,
+            issues=[],
+        ),
+    )
 

@@ -22,7 +22,7 @@ class Project(BaseModel):
     name: str
     year: int | None = None
     description: str
-    achievements: list[str] = []
+    achievements: list[str] = Field(default_factory=list)
 
 
 class Education(BaseModel):

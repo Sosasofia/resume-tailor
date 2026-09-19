@@ -1,6 +1,6 @@
-from app.models import JobRequirements
-from app.profile import Basics, Education, ResumeProfile
-from app.strategy import build_resume_strategy
+from app.domain.models import JobRequirements
+from app.domain.profile import Basics, Education, ResumeProfile
+from app.services.matching import build_resume_strategy
 
 
 def test_build_resume_strategy() -> None:

@@ -1,6 +1,6 @@
-from app.matcher import match_skills, normalize_skill
-from app.models import JobRequirements
-from app.profile import (
+from app.services.matching import match_skills, normalize_skill
+from app.domain.models import JobRequirements
+from app.domain.profile import (
     Basics,
     Education,
     ResumeProfile,
