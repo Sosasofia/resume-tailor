@@ -34,3 +34,12 @@ class FactualityIssue(BaseModel):
 class FactualityResult(BaseModel):
     approved: bool
     issues: list[FactualityIssue]
+
+
+class ResumeAnalysis(BaseModel):
+    match_score: int
+    matching_skills: list[str]
+    missing_required_skills: list[str]
+    relevant_experience: list[str]
+    relevant_projects: list[str]
+    recommendations: list[str]

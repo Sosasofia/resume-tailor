@@ -1,4 +1,8 @@
-from app.domain.models import JobRequirements, ResumeStrategy
+from app.domain.models import (
+    JobRequirements,
+    ResumeAnalysis,
+    ResumeStrategy,
+)
 from app.domain.profile import ResumeProfile
 
 
@@ -123,4 +127,83 @@ def build_resume_strategy(
         relevant_experience=sorted(set(relevant_experience)),
         relevant_projects=sorted(set(relevant_projects)),
         keywords_to_use=keywords_to_use,
+    )
+
+
+def calculate_match_score(
+    matching_skills: set[str],
+    required_skills: set[str],
+) -> int:
+    if not required_skills:
+        return 0
+
+    return round(
+        len(matching_skills)
+        / len(required_skills)
+        * 100
+    )
+
+
+def build_resume_analysis(
+    profile: ResumeProfile,
+    requirements: JobRequirements,
+) -> ResumeAnalysis:
+    strategy = build_resume_strategy(
+        profile,
+        requirements,
+    )
+
+    required_skills = {
+        normalize_skill(skill)
+        for skill in requirements.required_skills
+    }
+
+    matching_skills = {
+        normalize_skill(skill)
+        for skill in profile.skills
+    } & required_skills
+
+    match_score = calculate_match_score(
+        matching_skills,
+        required_skills,
+    )
+
+    recommendations: list[str] = []
+
+    if strategy.priority_skills:
+        recommendations.append(
+            "Prioritize these matching required skills: "
+            + ", ".join(strategy.priority_skills)
+            + "."
+        )
+
+    if strategy.relevant_experience:
+        recommendations.append(
+            "Emphasize relevant experience from: "
+            + ", ".join(strategy.relevant_experience)
+            + "."
+        )
+
+    if strategy.relevant_projects:
+        recommendations.append(
+            "Consider highlighting these relevant projects: "
+            + ", ".join(strategy.relevant_projects)
+            + "."
+        )
+
+    if strategy.missing_required_skills:
+        recommendations.append(
+            "Do not add missing required skills unless "
+            "they are actually part of your experience: "
+            + ", ".join(strategy.missing_required_skills)
+            + "."
+        )
+
+    return ResumeAnalysis(
+        match_score=match_score,
+        matching_skills=sorted(matching_skills),
+        missing_required_skills=strategy.missing_required_skills,
+        relevant_experience=strategy.relevant_experience,
+        relevant_projects=strategy.relevant_projects,
+        recommendations=recommendations,
     )
