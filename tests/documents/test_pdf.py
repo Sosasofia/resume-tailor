@@ -1,3 +1,4 @@
+from email.mime import text
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -14,16 +15,16 @@ def test_create_pdf(tmp_path: Path) -> None:
             location="Buenos Aires",
             email="test@example.com",
         ),
-        summary="Backend developer with Python experience.",
-        skills=["Python", "Docker"],
+        summary="Backend developer using C# & ASP.NET.",
+        skills=["C#", "C++", "ASP.NET & Azure"],
         experience=[],
         projects=[],
         education=[],
     )
 
     resume = ATSResume(
-        summary="Backend developer with Python experience.",
-        skills=["Python", "Docker"],
+        summary="Backend developer using C# & ASP.NET.",
+        skills=["C#", "C++", "ASP.NET & Azure"],
         experience=["Developed backend services."],
         projects=[],
         education=["Software Engineering"],
@@ -45,6 +46,7 @@ def test_create_pdf(tmp_path: Path) -> None:
 
     text = reader.pages[0].extract_text()
 
-    assert "Test User" in text
-    assert "Python" in text
+    assert "C#" in text
+    assert "C++" in text
+    assert "ASP.NET & Azure" in text
     assert "Developed backend services." in text

@@ -1,4 +1,5 @@
 import json
+import tempfile
 from pathlib import Path
 from typing import Literal
 
@@ -112,12 +113,19 @@ async def tailor(
                 detail="The uploaded resume is empty.",
             )
 
-        temp_path = Path("/tmp/resume-tailor-resume.pdf")
+        with tempfile.NamedTemporaryFile(
+            suffix=".pdf",
+            delete=False,
+        ) as temp_file:
+            temp_path = Path(temp_file.name)
 
         try:
             temp_path.write_bytes(content)
+
             resume_text = extract_pdf_text(temp_path)
-            profile = extraction.extract_resume_profile(resume_text)
+            profile = extraction.extract_resume_profile(
+                resume_text
+            )
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -225,7 +233,13 @@ async def tailor(
         )
 
     if format == "pdf":
-        output_path = Path("/tmp/tailored_resume.pdf")
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix=".pdf",
+            delete=False,
+        )
+
+        output_path = Path(temp_file.name)
+        temp_file.close()
 
         create_pdf(
             profile,

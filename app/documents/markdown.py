@@ -11,7 +11,10 @@ def render_markdown(
     lines.append(f"# {profile.basics.name}")
     lines.append("")
 
-    contact = [profile.basics.location, profile.basics.email]
+    contact = [
+        profile.basics.location,
+        profile.basics.email,
+    ]
 
     if profile.basics.linkedin:
         contact.append(profile.basics.linkedin)
@@ -22,41 +25,54 @@ def render_markdown(
     lines.append(" | ".join(contact))
     lines.append("")
 
-    lines.append("## Summary")
-    lines.append("")
-    lines.append(resume.summary)
-    lines.append("")
+    if resume.summary:
+        lines.extend(
+            [
+                "## Summary",
+                "",
+                resume.summary,
+                "",
+            ]
+        )
 
-    lines.append("## Skills")
-    lines.append("")
+    if resume.skills:
+        lines.extend(
+            [
+                "## Skills",
+                "",
+                *[f"- {skill}" for skill in resume.skills],
+                "",
+            ]
+        )
 
-    for skill in resume.skills:
-        lines.append(f"- {skill}")
+    if resume.experience:
+        lines.extend(
+            [
+                "## Experience",
+                "",
+                *[f"- {item}" for item in resume.experience],
+                "",
+            ]
+        )
 
-    lines.append("")
+    if resume.projects:
+        lines.extend(
+            [
+                "## Projects",
+                "",
+                *[f"- {item}" for item in resume.projects],
+                "",
+            ]
+        )
 
-    lines.append("## Experience")
-    lines.append("")
-
-    for experience in resume.experience:
-        lines.append(f"- {experience}")
-
-    lines.append("")
-
-    lines.append("## Projects")
-    lines.append("")
-
-    for project in resume.projects:
-        lines.append(f"- {project}")
-
-    lines.append("")
-
-    lines.append("## Education")
-    lines.append("")
-
-    for education in resume.education:
-        lines.append(f"- {education}")
-
-    lines.append("")
+    if resume.education:
+        lines.extend(
+            [
+                "## Education",
+                "",
+                *[f"- {item}" for item in resume.education],
+                "",
+            ]
+        )
 
     return "\n".join(lines)

@@ -1,7 +1,8 @@
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from reportlab.lib.enums import TA_LEFT
-from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
@@ -12,6 +13,10 @@ from reportlab.platypus import (
 
 from app.domain.models import ATSResume
 from app.domain.profile import ResumeProfile
+
+
+def _safe_text(value: str) -> str:
+    return escape(value)
 
 
 def create_pdf(
@@ -26,7 +31,7 @@ def create_pdf(
 
     document = SimpleDocTemplate(
         str(output_path),
-        pagesize=LETTER,
+        pagesize=A4,
         rightMargin=0.6 * inch,
         leftMargin=0.6 * inch,
         topMargin=0.6 * inch,
@@ -82,7 +87,7 @@ def create_pdf(
 
     story.append(
         Paragraph(
-            profile.basics.name,
+            _safe_text(profile.basics.name),
             name_style,
         )
     )
@@ -100,10 +105,11 @@ def create_pdf(
 
     story.append(
         Paragraph(
-            " | ".join(contact),
+            _safe_text(" | ".join(contact)),
             contact_style,
         )
     )
+    story.append(Spacer(1, 12))
 
     story.append(
         Paragraph("Summary", section_style)
@@ -111,7 +117,7 @@ def create_pdf(
 
     story.append(
         Paragraph(
-            resume.summary,
+            _safe_text(resume.summary),
             body_style,
         )
     )
@@ -123,7 +129,7 @@ def create_pdf(
     for skill in resume.skills:
         story.append(
             Paragraph(
-                f"• {skill}",
+                f"- {_safe_text(skill)}",
                 bullet_style,
             )
         )
@@ -135,33 +141,35 @@ def create_pdf(
     for experience in resume.experience:
         story.append(
             Paragraph(
-                f"• {experience}",
+                f"- {_safe_text(experience)}",
                 bullet_style,
             )
         )
 
-    story.append(
-        Paragraph("Projects", section_style)
-    )
-
-    for project in resume.projects:
+    if resume.projects:
         story.append(
-            Paragraph(
-                f"• {project}",
-                bullet_style,
-            )
+            Paragraph("Projects", section_style)
         )
 
-    story.append(
-        Paragraph("Education", section_style)
-    )
+        for project in resume.projects:
+            story.append(
+                Paragraph(
+                    f"- {_safe_text(project)}",
+                    bullet_style,
+                )
+            )
 
-    for education in resume.education:
+    if resume.education:
         story.append(
-            Paragraph(
-                f"• {education}",
-                bullet_style,
-            )
+            Paragraph("Education", section_style)
         )
+
+        for education in resume.education:
+            story.append(
+                Paragraph(
+                    f"- {_safe_text(education)}",
+                    bullet_style,
+                )
+            )
 
     document.build(story)

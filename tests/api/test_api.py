@@ -308,3 +308,71 @@ def test_tailor_renders_valid_resume(client, monkeypatch):
         ),
     )
 
+
+def test_tailor_returns_pdf(monkeypatch):
+    profile = build_profile()
+    requirements = build_requirements()
+    resume = build_resume()
+
+    monkeypatch.setattr(
+        "app.services.tailoring.generate_validated_resume",
+        lambda profile, requirements, strategy: resume,
+    )
+
+    response = client.post(
+        "/tailor",
+        data={
+            "format": "pdf",
+            "profile_json": profile.model_dump_json(),
+            "job_requirements_json": requirements.model_dump_json(),
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert response.headers["content-type"].startswith(
+        "application/pdf"
+    )
+
+    assert (
+        'filename="tailored_resume.pdf"'
+        in response.headers["content-disposition"]
+    )
+
+    assert response.content.startswith(b"%PDF")
+
+
+def test_tailor_returns_markdown(monkeypatch):
+    profile = build_profile()
+    requirements = build_requirements()
+    resume = build_resume()
+
+    monkeypatch.setattr(
+        "app.services.extraction.extract_job_requirements",
+        lambda _: requirements,
+    )
+
+    monkeypatch.setattr(
+        "app.services.tailoring.generate_validated_resume",
+        lambda profile, requirements, strategy: resume,
+    )
+
+    response = client.post(
+        "/tailor",
+        data={
+            "format": "markdown",
+            "profile_json": profile.model_dump_json(),
+            "job_description_text": "Python backend developer",
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert response.headers["content-type"].startswith(
+        "text/markdown"
+    )
+
+    assert "Test User" in response.text
+    assert "Backend developer with Python experience." in response.text
+    assert "- Python" in response.text
+
