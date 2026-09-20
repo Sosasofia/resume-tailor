@@ -11,7 +11,7 @@ from app.domain.profile import (
 from app.services import (
     tailoring
 )
-from app.services.tailoring import TailoringValidationError
+from app.services.tailoring import TailoringValidationError, tailor_resume
 
 
 def make_profile() -> ResumeProfile:
@@ -46,6 +46,16 @@ def make_strategy() -> ResumeStrategy:
         relevant_experience=[],
         relevant_projects=[],
         keywords_to_use=["backend"],
+    )
+
+
+def make_resume() -> ATSResume:
+    return ATSResume(
+        summary="Backend developer with Python experience.",
+        skills=["Python"],
+        experience=[],
+        projects=[],
+        education=[],
     )
 
 
@@ -108,6 +118,31 @@ def test_generated_resume_passes_both_validation_layers(
         make_profile(),
         make_requirements(),
         make_strategy(),
+    )
+
+    assert result == resume
+
+
+def test_tailor_resume_builds_strategy_and_generates_validated_resume(
+    monkeypatch,
+):
+    profile = make_profile()
+    requirements = make_requirements()
+    resume = make_resume()
+
+    monkeypatch.setattr(
+        "app.services.tailoring.build_resume_strategy",
+        lambda profile, requirements: make_strategy(),
+    )
+
+    monkeypatch.setattr(
+        "app.services.tailoring.generate_validated_resume",
+        lambda profile, requirements, strategy: resume,
+    )
+
+    result = tailor_resume(
+        profile,
+        requirements,
     )
 
     assert result == resume

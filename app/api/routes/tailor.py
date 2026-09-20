@@ -15,7 +15,6 @@ from app.services import (
 from app.api.schemas import TailorValidationErrorResponse
 from app.domain.profile import ResumeProfile
 from app.domain.models import JobRequirements
-from app.services.matching import build_resume_strategy
 from app.documents.markdown import render_markdown
 from app.documents.parser import extract_pdf_text
 from app.documents.pdf import create_pdf
@@ -184,22 +183,14 @@ async def tailor(
             job_text
         )
 
-    # ---------------------------------------------------------
-    # Strategy
-    # ---------------------------------------------------------
-    strategy = build_resume_strategy(
-        profile,
-        requirements,
-    )
 
     # ---------------------------------------------------------
     # Generate ATS resume
     # ---------------------------------------------------------
     try:
-        ats_resume = tailoring.generate_validated_resume(
+        ats_resume = tailoring.tailor_resume(
             profile,
             requirements,
-            strategy,
         )
     except tailoring.TailoringValidationError as exc:
         error_response = TailorValidationErrorResponse(

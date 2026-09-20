@@ -2,6 +2,7 @@ from app.clients.azure_openai import create_client, get_deployment
 from app.services import validation
 from app.domain.models import ATSResume, JobRequirements, ResumeStrategy
 from app.domain.profile import ResumeProfile
+from app.services.matching import build_resume_strategy
 
 
 class TailoringValidationError(Exception):
@@ -124,3 +125,19 @@ Return the complete ATS-friendly resume.
         )
 
     return response.output_parsed
+
+
+def tailor_resume(
+    profile: ResumeProfile,
+    requirements: JobRequirements,
+) -> ATSResume:
+    strategy = build_resume_strategy(
+        profile,
+        requirements,
+    )
+
+    return generate_validated_resume(
+        profile,
+        requirements,
+        strategy,
+    )

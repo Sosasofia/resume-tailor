@@ -94,8 +94,8 @@ def test_tailor_with_profile_json_and_job_text(
         )
 
         monkeypatch.setattr(
-            "app.services.tailoring.generate_validated_resume",
-            lambda profile, requirements, strategy: resume,
+            "app.services.tailoring.tailor_resume",
+            lambda profile, requirements: resume,
         )
 
         response = client.post(
@@ -148,6 +148,7 @@ def test_tailor_rejects_multiple_resume_sources() -> None:
     assert response.status_code == 400
     assert "Exactly one resume source" in response.json()["detail"]
 
+
 def test_tailor_requires_one_job_source() -> None:
     profile = build_profile()
 
@@ -161,6 +162,7 @@ def test_tailor_requires_one_job_source() -> None:
 
     assert response.status_code == 400
     assert "Exactly one job source" in response.json()["detail"]
+
 
 def test_tailor_rejects_multiple_job_sources() -> None:
     profile = build_profile()
@@ -179,6 +181,7 @@ def test_tailor_rejects_multiple_job_sources() -> None:
 
     assert response.status_code == 400
     assert "Exactly one job source" in response.json()["detail"]
+
 
 def test_tailor_rejects_invalid_profile_json() -> None:
     response = client.post(
@@ -202,8 +205,8 @@ def test_tailor_accepts_job_requirements_json(
         resume = build_resume()
 
         monkeypatch.setattr(
-            "app.services.tailoring.generate_validated_resume",
-            lambda profile, requirements, strategy: resume,
+            "app.services.tailoring.tailor_resume",
+            lambda profile, requirements: resume,
         )
 
         response = client.post(
@@ -315,8 +318,8 @@ def test_tailor_returns_pdf(monkeypatch):
     resume = build_resume()
 
     monkeypatch.setattr(
-        "app.services.tailoring.generate_validated_resume",
-        lambda profile, requirements, strategy: resume,
+        "app.services.tailoring.tailor_resume",
+        lambda profile, requirements: resume,
     )
 
     response = client.post(
@@ -353,8 +356,8 @@ def test_tailor_returns_markdown(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "app.services.tailoring.generate_validated_resume",
-        lambda profile, requirements, strategy: resume,
+        "app.services.tailoring.tailor_resume",
+        lambda profile, requirements: resume,
     )
 
     response = client.post(
