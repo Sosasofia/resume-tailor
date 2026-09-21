@@ -232,7 +232,7 @@ def test_tailor_rejects_unsupported_resume_claim(client, monkeypatch):
 
     monkeypatch.setattr(
         "app.services.tailoring.generate_ats_resume",
-        lambda profile, requirements, strategy: invalid_resume,
+        lambda profile, requirements, strategy, **kwargs: invalid_resume,
     )
 
     response = client.post(
@@ -266,7 +266,7 @@ def test_tailor_does_not_render_invalid_resume(client, monkeypatch):
 
     monkeypatch.setattr(
         "app.services.tailoring.generate_ats_resume",
-        lambda profile, requirements, strategy: invalid_resume,
+        lambda profile, requirements, strategy, **kwargs: invalid_resume,
     )
 
     def fail_if_called(*args, **kwargs):
@@ -300,7 +300,7 @@ def test_tailor_renders_valid_resume(client, monkeypatch):
 
     monkeypatch.setattr(
         "app.services.tailoring.generate_ats_resume",
-        lambda profile, requirements, strategy: valid_resume,
+        lambda profile, requirements, strategy, **kwargs: valid_resume,
     )
 
     monkeypatch.setattr(

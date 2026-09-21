@@ -72,7 +72,7 @@ def test_generated_resume_is_rejected_when_deterministic_validation_fails(
 
     monkeypatch.setattr(
         "app.services.tailoring.generate_ats_resume",
-        lambda profile, requirements, strategy: resume,
+        lambda profile, requirements, strategy, **kwargs: resume,
     )
 
     try:
@@ -103,7 +103,7 @@ def test_generated_resume_passes_both_validation_layers(
 
     monkeypatch.setattr(
         "app.services.tailoring.generate_ats_resume",
-        lambda profile, requirements, strategy: resume,
+        lambda profile, requirements, strategy, **kwargs: resume,
     )
 
     monkeypatch.setattr(

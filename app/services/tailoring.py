@@ -26,22 +26,37 @@ def generate_validated_resume(
     requirements: JobRequirements,
     strategy: ResumeStrategy,
 ) -> ATSResume:
-    resume = generate_ats_resume(
-        profile,
-        requirements,
-        strategy,
-    )
+    max_attempts = 2
+    attempts = 1
+    previous_errors = None
 
-    deterministic_result = validation.validate_resume(
-        profile,
-        resume,
-    )
-
-    if not deterministic_result.approved:
-        raise TailoringValidationError(
-            stage="deterministic_factuality",
-            errors=deterministic_result.errors,
+    while attempts <= max_attempts:
+    
+        resume = generate_ats_resume(
+            profile,
+            requirements,
+            strategy,
+            previous_errors=previous_errors,
         )
+
+        deterministic_result = validation.validate_resume(
+            profile,
+            resume,
+        )
+
+        previous_errors = deterministic_result.errors
+
+        if deterministic_result.approved:
+            break
+
+        if attempts == max_attempts:
+            raise TailoringValidationError(
+                stage="deterministic_factuality",
+                errors=deterministic_result.errors,
+            )
+
+        previous_errors = deterministic_result.errors
+        attempts += 1
 
     factuality_result = validation.validate_factuality(
         profile,
@@ -64,6 +79,7 @@ def generate_ats_resume(
     profile: ResumeProfile,
     requirements: JobRequirements,
     strategy: ResumeStrategy,
+    previous_errors: list[str] | None = None,
 ) -> ATSResume:
     client = create_client()
 
@@ -90,6 +106,14 @@ STRICT RULES:
 - Do not fabricate experience.
 - Do not add a "References" section.
 - Keep the resume concise and ATS-friendly.
+- Every statement in the summary must be directly supported by
+  one or more facts in the candidate profile.
+- Avoid generic claims such as "strong foundation", "extensive
+  experience", "proven expertise", "data-driven", or similar
+  evaluative language unless the profile explicitly supports them.
+- Do not combine separate profile facts into a broader claim if
+  that broader claim introduces a new concept.
+- Prefer concrete facts over subjective descriptions.
 
 ATS FORMAT:
 - Standard section names.
@@ -110,8 +134,14 @@ RESUME STRATEGY:
 CANDIDATE PROFILE:
 {profile.model_dump_json(indent=2)}
 
-Return the complete ATS-friendly resume.
 """
+    if previous_errors:
+        prompt += "\nCORRECTION REQUIRED:\nYour previous attempt failed strict validation because you included the following unsupported facts/skills:\n"
+        for error in previous_errors:
+            prompt += f"- {error}\n"
+        prompt += "\nRegenerate the complete ATS-friendly resume, ensuring you DO NOT include these unsupported items."
+    else:
+        prompt += "\nReturn the complete ATS-friendly resume."
 
     response = client.responses.parse(
         model=get_deployment(),
