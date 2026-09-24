@@ -1,19 +1,33 @@
 services:
   dev:
     build:
-      context: .
+      context: ./server
       dockerfile: Dockerfile
 
     working_dir: /workspace
 
     volumes:
-      - .:/workspace
+      - ./server:/workspace
 
     env_file:
       - .env
-    
+
     ports:
       - "8000:8000"
 
     stdin_open: true
     tty: true
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - dev
